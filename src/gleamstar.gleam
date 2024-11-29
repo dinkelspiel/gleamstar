@@ -6,6 +6,19 @@ import gleam/order.{Eq, Gt, Lt}
 import gleam/result
 
 /// Generates a path between the start and the goal coordinates that are in the format #(x: Int, y: Int) while avoiding the coordinates in the obstacles list.
+/// The returned path excludes the starting point but includes the end point.
+///
+/// ## Examples
+///
+/// ```gleam
+/// a_star(start: #(0, 0), goal: #(2, 2), obstacles: [#(1, 1)])
+/// // Ok([#(0, 1), #(1, 2), #(2, 2)])
+/// //
+/// // S = Start, P = Path, X = Obstacle, E = End
+/// // S - -
+/// // P X -
+/// // - P E
+/// ```
 pub fn a_star(
   start start: #(Int, Int),
   goal goal: #(Int, Int),
