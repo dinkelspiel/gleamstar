@@ -1,5 +1,5 @@
 name = "gleamstar"
-version = "1.0.0"
+version = "1.0.1"
 description = "The A* search algorithm implemented in gleam"
 licences = ["MIT"]
 repository = { type = "github", user = "dinkelspiel", repo = "gleamstar" }

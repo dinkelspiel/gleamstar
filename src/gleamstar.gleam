@@ -1,5 +1,6 @@
 import gleam/bool
 import gleam/dict
+import gleam/float
 import gleam/int
 import gleam/list
 import gleam/order.{Eq, Gt, Lt}
@@ -26,7 +27,7 @@ pub fn a_star(
 ) {
   let open_set = [start]
 
-  let g_score = dict.new() |> dict.insert(start, 0)
+  let g_score = dict.new() |> dict.insert(start, 0.0)
 
   let f_score = dict.new() |> dict.insert(start, heuristic(start, goal))
 
@@ -59,22 +60,22 @@ fn reconstruct_path(
   }
 }
 
-fn open_set_sorted_by_f_score(open_set, f_score) {
+fn open_set_sorted_by_f_score(open_set, f_score: dict.Dict(#(Int, Int), Float)) {
   list.sort(open_set, fn(a, b) {
     let ascore = case dict.get(f_score, a) {
-      Error(_) -> infinity()
+      Error(_) -> infinity() |> int.to_float
 
       Ok(score) -> score
     }
     let bscore = case dict.get(f_score, b) {
-      Error(_) -> infinity()
+      Error(_) -> infinity() |> int.to_float
       Ok(score) -> score
     }
 
-    case ascore < bscore {
+    case ascore <. bscore {
       True -> Lt
       False ->
-        case ascore > bscore {
+        case ascore >. bscore {
           True -> Gt
           False -> Eq
         }
@@ -95,15 +96,27 @@ fn get_neighbors_of_current(current: #(Int, Int)) {
   ]
 }
 
-fn heuristic(neighbor: #(Int, Int), goal: #(Int, Int)) {
-  int.absolute_value(neighbor.0 - goal.0)
-  + int.absolute_value(neighbor.1 - goal.1)
+fn heuristic(neighbor: #(Int, Int), goal: #(Int, Int)) -> Float {
+  {
+    int.absolute_value(neighbor.0 - goal.0)
+    + int.absolute_value(neighbor.1 - goal.1)
+  }
+  |> int.to_float
+}
+
+fn distance(goal: #(Int, Int), current: #(Int, Int)) -> Float {
+  {
+    { int.power(goal.0 - current.0, 2.0) |> result.unwrap(0.0) }
+    +. { int.power(goal.1 - current.1, 2.0) |> result.unwrap(0.0) }
+  }
+  |> float.square_root
+  |> result.unwrap(0.0)
 }
 
 fn handle_neighbors_of_current(
   neighbors: List(#(Int, Int)),
-  g_score,
-  f_score,
+  f_score: dict.Dict(#(Int, Int), Float),
+  g_score: dict.Dict(#(Int, Int), Float),
   came_from,
   current,
   goal,
@@ -126,17 +139,19 @@ fn handle_neighbors_of_current(
       })
 
       let tentative_g_score =
-        case dict.get(g_score, current) {
-          Ok(value) -> value
-          Error(_) -> infinity()
+        {
+          case dict.get(g_score, current) {
+            Ok(value) -> value
+            Error(_) -> infinity() |> int.to_float
+          }
         }
-        + 1
+        +. distance(goal, current)
 
       case
         tentative_g_score
-        < case dict.get(g_score, neighbor) {
+        <. case dict.get(g_score, neighbor) {
           Ok(value) -> value
-          Error(_) -> infinity()
+          Error(_) -> infinity() |> int.to_float()
         }
       {
         True -> {
@@ -146,7 +161,7 @@ fn handle_neighbors_of_current(
             dict.insert(
               f_score,
               neighbor,
-              tentative_g_score + heuristic(neighbor, goal),
+              tentative_g_score +. heuristic(neighbor, goal),
             )
 
           let open_set = case list.contains(open_set, neighbor) {
@@ -156,8 +171,8 @@ fn handle_neighbors_of_current(
 
           handle_neighbors_of_current(
             rest,
-            g_score,
             f_score,
+            g_score,
             came_from,
             current,
             goal,
@@ -168,8 +183,8 @@ fn handle_neighbors_of_current(
         False ->
           handle_neighbors_of_current(
             rest,
-            g_score,
             f_score,
+            g_score,
             came_from,
             current,
             goal,
@@ -184,8 +199,8 @@ fn handle_neighbors_of_current(
 
 fn do_a_star(
   open_set: List(#(Int, Int)),
-  f_score: dict.Dict(#(Int, Int), Int),
-  g_score: dict.Dict(#(Int, Int), Int),
+  f_score: dict.Dict(#(Int, Int), Float),
+  g_score: dict.Dict(#(Int, Int), Float),
   goal: #(Int, Int),
   came_from: dict.Dict(#(Int, Int), #(Int, Int)),
   obstacles: List(#(Int, Int)),
@@ -210,8 +225,8 @@ fn do_a_star(
 
       handle_neighbors_of_current(
         get_neighbors_of_current(current),
-        g_score,
         f_score,
+        g_score,
         came_from,
         current,
         goal,
